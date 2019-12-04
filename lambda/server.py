@@ -61,7 +61,7 @@ def lambda_server():
     global HOST_PIPE
     init()
     server = tornado.httpserver.HTTPServer(tornado_app)
-    socket = tornado.netutil.bind_unix_socket(SOCK_PATH)
+    socket = tornado.netutil.bind_unix_socket(SOCK_PATH, mode=0o777)
     server.add_socket(socket)
     # notify worker server that we are ready through stdout
     # flush is necessary, and don't put it after tornado start; won't work

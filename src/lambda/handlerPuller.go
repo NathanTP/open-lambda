@@ -131,7 +131,7 @@ func (cp *HandlerPuller) pullLocalFile(src, lambdaName string) (targetDir string
 
 	// miss:
 	targetDir = cp.dirMaker.Get(lambdaName)
-	if err := os.Mkdir(targetDir, os.ModeDir); err != nil {
+	if err := os.Mkdir(targetDir, os.ModeDir|0o700); err != nil {
 		return "", err
 	}
 
