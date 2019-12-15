@@ -662,7 +662,7 @@ func (linst *LambdaInstance) Task() {
 			t := common.T0("ServeHTTP")
 			proxy.ServeHTTP(req.w, req.r)
 			t.T1()
-			req.execMs = int(t.Milliseconds)
+			req.execMs = int(t.Microseconds / 1000)
 			f.doneChan <- req
 
 			// check whether we should shutdown (non-blocking)
