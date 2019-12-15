@@ -416,6 +416,7 @@ func (f *LambdaFunc) Task() {
 				continue
 			}
 		case req := <-f.funcChan:
+			t := common.T0("lambdaFunc-invoke")
 			// msg: client -> function
 
 			// check for new code, and cleanup old code
@@ -446,6 +447,7 @@ func (f *LambdaFunc) Task() {
 
 			f.lmgr.DepTracer.TraceInvocation(f.codeDir)
 
+			t.T1()
 			select {
 			case f.instChan <- req:
 				// msg: function -> instance
@@ -598,6 +600,7 @@ func (linst *LambdaInstance) Task() {
 
 		// if we have a sandbox, try unpausing it to see if it is still alive
 		if sb != nil {
+			tUnpause := common.T0("unpause")
 			// Unpause will often fail, because evictors
 			// are likely to prefer to evict paused
 			// sandboxes rather than inactive sandboxes.
@@ -607,11 +610,13 @@ func (linst *LambdaInstance) Task() {
 				f.printf("discard sandbox %s due to Unpause error: %v", sb.ID(), err)
 				sb = nil
 			}
+			tUnpause.T1()
 		}
 
 		// if we don't already have a Sandbox, create one, and
 		// HTTP proxy over the channel
 		if sb == nil {
+			tCreate := common.T0("sandbox-create")
 			sb = nil
 			if f.lmgr.ImportCache != nil {
 				scratchDir := f.lmgr.scratchDirs.Make(f.name)
@@ -646,6 +651,7 @@ func (linst *LambdaInstance) Task() {
 				sb = nil
 				continue // wait for another request before retrying
 			}
+			tCreate.T1()
 		}
 
 		// below here, we're guaranteed (1) sb != nil, (2) proxy != nil, (3) sb is unpaused

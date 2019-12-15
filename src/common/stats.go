@@ -48,6 +48,10 @@ type snapshotMsg struct {
 	done  chan bool
 }
 
+// The value of this message is irrelevant, statsTask() just switches on type
+// to determine which command to execute
+type statResetMsg int
+
 var initOnce sync.Once
 var statsChan chan interface{} = make(chan interface{}, 256)
 
@@ -72,6 +76,9 @@ func statsTask() {
 				msg.stats[k+".ms-avg"] = msSums[k] / cnt
 			}
 			msg.done <- true
+		case *statResetMsg:
+			msCounts = make(map[string]int64)
+			msSums = make(map[string]int64)
 		default:
 			panic(fmt.Sprintf("unkown type: %T", msg))
 		}
@@ -90,6 +97,10 @@ func SnapshotStats() map[string]int64 {
 	statsChan <- &snapshotMsg{stats, done}
 	<-done
 	return stats
+}
+
+func ResetStats() {
+	statsChan <- new(statResetMsg)
 }
 
 type Latency struct {
