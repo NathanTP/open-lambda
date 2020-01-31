@@ -70,12 +70,12 @@ func (pool *DockerPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir 
 	id := fmt.Sprintf("%d", atomic.AddInt64(pool.idxPtr, 1))
 
 	volumes := []string{
-		fmt.Sprintf("%s:%s", scratchDir, "/host"),
-		fmt.Sprintf("%s:%s:ro", pool.pkgsDir, "/packages"),
+		fmt.Sprintf("%s:%s:z", scratchDir, "/host"),
+		fmt.Sprintf("%s:%s:z,ro", pool.pkgsDir, "/packages"),
 	}
 
 	if codeDir != "" {
-		volumes = append(volumes, fmt.Sprintf("%s:%s:ro", codeDir, "/handler"))
+		volumes = append(volumes, fmt.Sprintf("%s:%s:z,ro", codeDir, "/handler"))
 	}
 
 	// pipe for synchronization before socket is ready
