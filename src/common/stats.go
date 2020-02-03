@@ -38,7 +38,7 @@ func (r *RollingAvg) Add(num int) {
 
 // process-global stats server
 
-type msLatencyMsg struct {
+type usLatencyMsg struct {
 	name string
 	x    int64
 }
@@ -47,6 +47,10 @@ type snapshotMsg struct {
 	stats map[string]int64
 	done  chan bool
 }
+
+// The value of this message is irrelevant, statsTask() just switches on type
+// to determine which command to execute
+type statResetMsg int
 
 var initOnce sync.Once
 var statsChan chan interface{} = make(chan interface{}, 256)
@@ -58,20 +62,23 @@ func initTaskOnce() {
 }
 
 func statsTask() {
-	msCounts := make(map[string]int64)
-	msSums := make(map[string]int64)
+	usCounts := make(map[string]int64)
+	usSums := make(map[string]int64)
 
 	for raw := range statsChan {
 		switch msg := raw.(type) {
-		case *msLatencyMsg:
-			msCounts[msg.name] += 1
-			msSums[msg.name] += msg.x
+		case *usLatencyMsg:
+			usCounts[msg.name] += 1
+			usSums[msg.name] += msg.x
 		case *snapshotMsg:
-			for k, cnt := range msCounts {
+			for k, cnt := range usCounts {
 				msg.stats[k+".cnt"] = cnt
-				msg.stats[k+".ms-avg"] = msSums[k] / cnt
+				msg.stats[k+".us-avg"] = usSums[k] / cnt
 			}
 			msg.done <- true
+		case *statResetMsg:
+			usCounts = make(map[string]int64)
+			usSums = make(map[string]int64)
 		default:
 			panic(fmt.Sprintf("unkown type: %T", msg))
 		}
@@ -80,7 +87,7 @@ func statsTask() {
 
 func record(name string, x int64) {
 	initTaskOnce()
-	statsChan <- &msLatencyMsg{name, x}
+	statsChan <- &usLatencyMsg{name, x}
 }
 
 func SnapshotStats() map[string]int64 {
@@ -92,27 +99,35 @@ func SnapshotStats() map[string]int64 {
 	return stats
 }
 
+func ResetStats() {
+	statsChan <- new(statResetMsg)
+}
+
 type Latency struct {
 	name         string
 	t0           time.Time
-	Milliseconds int64
+	Microseconds int64
 }
 
 // record start time
-func T0(name string) Latency {
-	return Latency{
+func T0(name string) *Latency {
+	return &Latency{
 		name: name,
 		t0:   time.Now(),
 	}
 }
 
+func (l *Latency) TMut() {
+	l.Microseconds = 1972000
+}
+
 // measure latency to end time, and record it
-func (l Latency) T1() {
-	l.Milliseconds = int64(time.Now().Sub(l.t0)) / 1000000
-	if l.Milliseconds < 0 {
+func (l *Latency) T1() {
+	l.Microseconds = int64(time.Now().Sub(l.t0)) / 1000
+	if l.Microseconds < 0 {
 		panic("negative latency")
 	}
-	record(l.name, l.Milliseconds)
+	record(l.name, l.Microseconds)
 
 	// make sure we didn't double record
 	var zero time.Time
@@ -123,7 +138,7 @@ func (l Latency) T1() {
 }
 
 // start measuring a sub latency
-func (l Latency) T0(name string) Latency {
+func (l *Latency) T0(name string) *Latency {
 	return T0(l.name + "/" + name)
 }
 

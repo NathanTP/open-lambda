@@ -3,6 +3,8 @@ import tornado.ioloop
 import tornado.web
 import tornado.httpserver
 import tornado.netutil
+import time
+import collections
 
 # Note: SOCK doesn't use this anymore (it uses sock2.py instead), but
 # this is still here because we haven't updated docker.go yet.
@@ -26,6 +28,25 @@ initialized = False
 parser = argparse.ArgumentParser(description='Listen and serve cache requests or lambda invocations.')
 parser.add_argument('--cache', action='store_true', default=False, help='Begin as a cache entry.')
 
+globStats = collections.OrderedDict()
+
+statList = ["olSBInvoke", "Serve"]
+def resetStats():
+    for k in statList:
+        globStats["n" + k] = 0
+        globStats["t" + k] = 0
+
+def reportStats():
+    means = collections.OrderedDict()
+    for k in statList: 
+        if globStats['n' + k] != 0:
+            means[k] = globStats['t' + k] / globStats['n' + k]
+        else:
+            means[k] = 0
+
+    resetStats()
+    return json.dumps(means)
+
 # run after forking into sandbox
 def init():
     global initialized, f
@@ -39,6 +60,7 @@ def init():
 
 class SockFileHandler(tornado.web.RequestHandler):
     def post(self):
+        serveStart = time.time()
         try:
             data = self.request.body
             try :
@@ -47,8 +69,20 @@ class SockFileHandler(tornado.web.RequestHandler):
                 self.set_status(400)
                 self.write('bad POST data: "%s"'%str(data))
                 return
-            self.write(json.dumps(f.f(event)))
-        except Exception:
+            if 'ReportStats' in event:
+                self.write(reportStats())
+                resetStats()
+            else:
+                invokeStart = time.time()
+                r = f.f(event)
+                globStats['tolSBInvoke'] += (time.time() - invokeStart) * 1000000
+                globStats['nolSBInvoke'] += 1
+
+                self.write(json.dumps(r))
+
+                globStats['tServe'] += (time.time() - serveStart) * 1000000
+                globStats['nServe'] += 1
+        except Exception as e:
             self.set_status(500) # internal error
             self.write(traceback.format_exc())
 
@@ -130,6 +164,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     redirect()
 
+    resetStats()
     if args.cache:
         cache_loop()
     else:

@@ -50,6 +50,16 @@ func Stats(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.Write(b)
 	}
+	if r.Body != nil {
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Printf("Couldn't parse body: %v\n", err)
+		}
+		if string(body) == "reset" {
+			log.Println("Resetting Statistics")
+			common.ResetStats()
+		}
+	}
 }
 
 func Main() (err error) {
