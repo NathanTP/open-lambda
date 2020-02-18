@@ -96,6 +96,11 @@ func (pool *DockerPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir 
 				CapAdd:  pool.caps,
 				PidMode: pool.pidMode,
 				Runtime: pool.docker_runtime,
+				DeviceRequests: []docker.DeviceRequest{{
+					Driver:       "nvidia",
+					Count:        1,
+					Capabilities: [][]string{{"gpu"}},
+				}},
 			},
 		},
 	)
