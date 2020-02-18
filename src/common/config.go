@@ -65,6 +65,7 @@ type FeaturesConfig struct {
 	Reuse_cgroups       bool `json:"reuse_cgroups"`
 	Import_cache        bool `json:"import_cache"`
 	Downsize_paused_mem bool `json:"downsize_paused_mem"`
+	Enable_gpu          bool `json:"enable_gpu"`
 }
 
 type TraceConfig struct {
@@ -150,6 +151,7 @@ func LoadDefaults(olPath string) error {
 		Features: FeaturesConfig{
 			Import_cache:        true,
 			Downsize_paused_mem: true,
+			Enable_gpu:          false,
 		},
 		Storage: StorageConfig{
 			Root:    "private",
@@ -201,6 +203,10 @@ func checkConf() error {
 		min_mem := 2 * Max(Conf.Limits.Installer_mem_mb, Conf.Limits.Mem_mb)
 		if min_mem > Conf.Mem_pool_mb {
 			return fmt.Errorf("mem_pool_mb must be at least %d", min_mem)
+		}
+
+		if Conf.Features.Enable_gpu {
+			return fmt.Errorf("features.import_cache must be disabled for sock Sandbox")
 		}
 	} else if Conf.Sandbox == "docker" {
 		if Conf.Pkgs_dir == "" {

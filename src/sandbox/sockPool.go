@@ -197,3 +197,7 @@ func (pool *SOCKPool) Cleanup() {
 func (pool *SOCKPool) DebugString() string {
 	return pool.debugger.Dump()
 }
+
+func (pool *SOCKPool) MaxConcurrency() (int, error) {
+	return -1, nil
+}

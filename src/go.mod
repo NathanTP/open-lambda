@@ -13,6 +13,7 @@ require (
 	github.com/fsouza/go-dockerclient v1.6.2-0.20200218010613-0f160ccc8fad
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
+	github.com/jaypipes/ghw v0.5.0
 	github.com/josharian/impl v0.0.0-20191119165012-6b9658ad00c7 // indirect
 	github.com/jstemmer/gotags v1.4.1 // indirect
 	github.com/kisielk/errcheck v1.2.0 // indirect

@@ -21,6 +21,9 @@ type SandboxPool interface {
 	// handler will be called whenever a Sandbox is created, deleted, etc
 	AddListener(handler SandboxEventFunc)
 
+	// Return the maximum number of concurrent containers for this pool (or -1 if unlimited)
+	MaxConcurrency() (int, error)
+
 	DebugString() string
 }
 
