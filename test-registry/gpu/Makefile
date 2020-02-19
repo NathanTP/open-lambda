@@ -5,3 +5,7 @@ vadd.so: vadd.cu
 
 vadd: vadd.cu
 	nvcc vadd.cu -o vadd
+
+clean:
+	rm -f vadd
+	rm -f vadd.so
