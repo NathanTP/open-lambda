@@ -82,20 +82,23 @@ func initOLDir(olPath string) (err error) {
 		return err
 	}
 
-	path := filepath.Join(base, "dev", "null")
-	if err := exec.Command("mknod", "-m", "0644", path, "c", "1", "3").Run(); err != nil {
-		return err
-	}
-
-	path = filepath.Join(base, "dev", "random")
-	if err := exec.Command("mknod", "-m", "0644", path, "c", "1", "8").Run(); err != nil {
-		return err
-	}
-
-	path = filepath.Join(base, "dev", "urandom")
-	if err := exec.Command("mknod", "-m", "0644", path, "c", "1", "9").Run(); err != nil {
-		return err
-	}
+	// XXX it is unclear why these were needed. However, they are not possible
+	// without sudo and cause 'ol new' to fail.
+	//
+	// path := filepath.Join(base, "dev", "null")
+	// if err := exec.Command("mknod", "-m", "0644", path, "c", "1", "3").Run(); err != nil {
+	// 	return err
+	// }
+	//
+	// path = filepath.Join(base, "dev", "random")
+	// if err := exec.Command("mknod", "-m", "0644", path, "c", "1", "8").Run(); err != nil {
+	// 	return err
+	// }
+	//
+	// path = filepath.Join(base, "dev", "urandom")
+	// if err := exec.Command("mknod", "-m", "0644", path, "c", "1", "9").Run(); err != nil {
+	// 	return err
+	// }
 
 	fmt.Printf("Working Directory: %s\n\n", olPath)
 	fmt.Printf("Worker Defaults: \n%s\n\n", common.DumpConfStr())

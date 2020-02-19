@@ -486,6 +486,10 @@ func (f *LambdaFunc) Task() {
 		}
 
 		// POLICY: how many instances (i.e., virtual sandboxes) should we allocate?
+		maxSB, err := f.lmgr.sbPool.MaxConcurrency()
+		if err != nil {
+			panic(err)
+		}
 
 		// AUTOSCALING STEP 1: decide how many instances we want
 
@@ -505,6 +509,12 @@ func (f *LambdaFunc) Task() {
 			desiredInstances = 1
 		}
 
+		// Stay below maximum concurrency of the pool
+		if maxSB != -1 {
+			if desiredInstances > maxSB {
+				desiredInstances = maxSB
+			}
+		}
 		// AUTOSCALING STEP 2: tweak how many instances we have, to get closer to our goal
 
 		// make at most one scaling adjustment per second

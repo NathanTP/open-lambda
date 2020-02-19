@@ -1,4 +1,5 @@
-FROM ubuntu:bionic
+# FROM ubuntu:bionic
+FROM nvidia/cuda:10.2-base
 
 RUN apt-get -y --fix-missing update
 RUN apt-get -y install wget apt-transport-https

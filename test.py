@@ -162,10 +162,10 @@ def TestConf(**keywords):
     put_conf(orig)
 
 
-def run(cmd):
+def run(cmd, **kwargs):
     print("RUN", " ".join(cmd))
     try:
-        out = check_output(cmd, stderr=subprocess.STDOUT)
+        out = check_output(cmd, stderr=subprocess.STDOUT, **kwargs)
         fail = False
     except subprocess.CalledProcessError as e:
         out = e.output
@@ -473,6 +473,41 @@ def tests():
         call_each_once(lambda_count=1000, alloc_mb=10)
 
 
+@test
+def echo_test():
+    msg = 'hello world'
+    r = post("run/echo", msg)
+    raise_for_status(r)
+    # post seems to quote the reponse
+    respText = r.text.replace('"', '')
+    if respText != msg:
+        raise Exception("echo did not return correct message: Expected " + msg + " Got " + respText)
+
+
+@test
+def gpu_test():
+    run(['make'], cwd=os.path.join("test-registry", "gpu"))
+    r = post("run/gpu", {"test-size":1048576})
+    if r.text != r'"Success\n"':
+        raise Exception("GPU failure did not return correct message: " + r.text)
+
+def srkTests():
+    """Run only the tests needed/used by SRK and related projects"""
+
+    test_reg = os.path.abspath("test-registry")
+
+    feat = { "reuse_cgroups" : False,
+            "import_cache" : False,
+            "downsize_paused_mem" : True,
+            "enable_gpu" : False
+            }
+    with TestConf(sandbox="docker", features=feat, registry=test_reg):
+        echo_test()
+    
+    feat['enable_gpu'] = True
+    with TestConf(sandbox="docker", features=feat, registry=test_reg):
+        gpu_test()
+
 def main():
     t0 = time.time()
 
@@ -490,8 +525,10 @@ def main():
     run(['./ol', 'new', '-p='+OLDIR])
 
     # run tests with various configs
-    with TestConf(limits={"installer_mem_mb": 250}):
-        tests()
+    srkTests()
+
+    # with TestConf(limits={"installer_mem_mb": 250}):
+    #     tests()
 
     # save test results
     passed = len([t for t in results["runs"] if t["pass"]])

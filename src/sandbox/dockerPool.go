@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	docker "github.com/fsouza/go-dockerclient"
+	"github.com/jaypipes/ghw"
 
 	"github.com/open-lambda/open-lambda/ol/common"
 	"github.com/open-lambda/open-lambda/ol/sandbox/dockerutil"
@@ -84,6 +85,17 @@ func (pool *DockerPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir 
 		return nil, err
 	}
 
+	var deviceReq []docker.DeviceRequest
+	if common.Conf.Features.Enable_gpu {
+		deviceReq = []docker.DeviceRequest{{
+			Driver:       "nvidia",
+			Count:        1,
+			Capabilities: [][]string{{"gpu"}},
+		}}
+	} else {
+		deviceReq = []docker.DeviceRequest{}
+	}
+
 	container, err := pool.client.CreateContainer(
 		docker.CreateContainerOptions{
 			Config: &docker.Config{
@@ -92,10 +104,11 @@ func (pool *DockerPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir 
 				Labels: pool.labels,
 			},
 			HostConfig: &docker.HostConfig{
-				Binds:   volumes,
-				CapAdd:  pool.caps,
-				PidMode: pool.pidMode,
-				Runtime: pool.docker_runtime,
+				Binds:          volumes,
+				CapAdd:         pool.caps,
+				PidMode:        pool.pidMode,
+				Runtime:        pool.docker_runtime,
+				DeviceRequests: deviceReq,
 			},
 		},
 	)
@@ -141,4 +154,29 @@ func (pool *DockerPool) DebugString() string {
 
 func (pool *DockerPool) AddListener(handler SandboxEventFunc) {
 	pool.eventHandlers = append(pool.eventHandlers, handler)
+}
+
+// Return the maximum concurrency supported by this pool or -1 if there is no
+// limit
+func (pool *DockerPool) MaxConcurrency() (int, error) {
+	if common.Conf.Features.Enable_gpu {
+		gpuInfo, err := ghw.GPU()
+		if err != nil {
+			fmt.Println("Failed to detect GPUs")
+			return 1, err
+		}
+		var ngpu int = 0
+		for _, card := range gpuInfo.GraphicsCards {
+			//This is not the right way to do this, I should figure out how to
+			//determine if the card supports CUDA. This works for now though.
+			if card.DeviceInfo.Vendor.Name == "NVIDIA Corporation" {
+				fmt.Printf("WARNING: assuming card %v supports CUDA\n", card.DeviceInfo.Product.Name)
+				ngpu++
+			}
+		}
+		fmt.Println("DockerPool setting instance limit to the number of GPUs: ", ngpu)
+		return ngpu, nil
+	} else {
+		return -1, nil
+	}
 }
