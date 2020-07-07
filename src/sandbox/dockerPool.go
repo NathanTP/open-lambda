@@ -2,6 +2,7 @@ package sandbox
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 	"syscall"
@@ -73,6 +74,11 @@ func (pool *DockerPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir 
 	volumes := []string{
 		fmt.Sprintf("%s:%s:z", scratchDir, "/host"),
 		fmt.Sprintf("%s:%s:z,ro", pool.pkgsDir, "/packages"),
+	}
+
+	sharedDir := os.Getenv("OL_SHARED_VOLUME")
+	if sharedDir != "" {
+		volumes = append(volumes, fmt.Sprintf("%s:%s:z", sharedDir, "/shared"))
 	}
 
 	if codeDir != "" {
