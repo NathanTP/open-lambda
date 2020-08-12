@@ -18,5 +18,6 @@ RUN cd / && python3 setup.py build_ext --inplace && mv ol.*.so /ol.so
 # for Docker container engine
 COPY server.py /
 COPY spin /
+RUN chmod 777 /spin /server.py
 
 CMD ["/spin"]

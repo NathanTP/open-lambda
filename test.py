@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys, json, time, requests, copy, traceback, tempfile, threading, subprocess
+import os, sys, json, time, requests, copy, traceback, tempfile, threading, subprocess, pathlib
 from collections import OrderedDict
 from subprocess import check_output
 from multiprocessing import Pool
@@ -491,6 +491,27 @@ def gpu_test():
     if r.text != r'"Success\n"':
         raise Exception("GPU failure did not return correct message: " + r.text)
 
+@test
+def mnt_test(mntPath=None):
+
+    mntPath = pathlib.Path(mntPath)
+
+    # lambda will try to stat this file
+    (mntPath / "host2lambda").touch(mode=0o600)
+
+    r = post("run/mntTest", "")
+    raise_for_status(r)
+
+    if r.text != r'"Success\n"':
+        raise Exception("Mount lambda failed: " + r.text)
+
+    lbdFile = (mntPath / "lambda2host")
+    stat = lbdFile.stat()
+
+    if stat.st_uid != os.getuid() or stat.st_gid != os.getgid():
+        raise Exception("Lambda created file has wrong user/group: {}:{}".format(stat.st_uid, stat.st_gid))
+        
+
 def srkTests():
     """Run only the tests needed/used by SRK and related projects"""
 
@@ -503,6 +524,13 @@ def srkTests():
             }
     with TestConf(sandbox="docker", features=feat, registry=test_reg):
         echo_test()
+        with tempfile.TemporaryDirectory() as tDir:
+            os.environ['OL_SHARED_VOLUME'] = tDir
+            mnt_test(mntPath=tDir)
+
+
+    with TestConf(sandbox="docker", features=feat, registry=test_reg, mem_pool_mb=500):
+        install_tests()
     
     feat['enable_gpu'] = True
     with TestConf(sandbox="docker", features=feat, registry=test_reg):

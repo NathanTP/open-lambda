@@ -6,6 +6,21 @@ is to enable exploration of new approaches to serverless computing.  Our
 research agenda is described in more detail in a [HotCloud '16
 paper](https://www.usenix.org/system/files/conference/hotcloud16/hotcloud16_hendrickson.pdf).
 
+## New SRK features
+This fork of openlambda adds a few new features used by SRK or other SRK-related experiments.
+
+### GPU Support
+If you set the '"enable\_gpu" : true' option under "features" in your
+config.json, each lambda will be launched with an attached GPU that can be used
+by standard tools. Enabling this will limit the max concurrency to the number
+of GPUs. There is currently no way to specify per-lambda whether a GPU is
+needed or not.
+
+### Shared Folders
+You may optionaly share a folder between the host and the lambda by setting the
+"OL\_SHARED\_VOLUME" environment variable to the host path to mount. The directory
+will be mounted at /shared in the lambda.
+
 ## Getting Started
 
 OpenLambda relies heavily on operations that require root

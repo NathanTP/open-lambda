@@ -3,6 +3,7 @@ package sandbox
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sync/atomic"
 	"syscall"
@@ -102,12 +103,22 @@ func (pool *DockerPool) Create(parent Sandbox, isLeaf bool, codeDir, scratchDir 
 		deviceReq = []docker.DeviceRequest{}
 	}
 
+	// Docker runs users as root by default which can cause problems on the
+	// host with bind-mounts (new files have root permissions and can't be
+	// modified/cleaned-up. We instead run as the current host user.
+	usr, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+	userOpt := fmt.Sprintf("%v:%v", usr.Uid, usr.Gid)
+
 	container, err := pool.client.CreateContainer(
 		docker.CreateContainerOptions{
 			Config: &docker.Config{
 				Cmd:    []string{"/spin"},
 				Image:  dockerutil.LAMBDA_IMAGE,
 				Labels: pool.labels,
+				User:   userOpt,
 			},
 			HostConfig: &docker.HostConfig{
 				Binds:          volumes,
